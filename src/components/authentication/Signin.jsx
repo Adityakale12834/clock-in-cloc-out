@@ -115,7 +115,7 @@ function Signup() {
                 </button>
 
                 <p className="text-sm text-center text-gray-600 mt-4">
-                    Already have an account? <Link to="/signin" className="text-indigo-600 hover:underline">Sign in</Link>
+                    Already have an account? <Link to="/signup" className="text-indigo-600 hover:underline">Sign in</Link>
                 </p>
             </div>
         </div>
