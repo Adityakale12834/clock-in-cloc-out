@@ -23,8 +23,6 @@ function Home() {
     const [elapsedTime, setElapsedTime] = useState(0); // Time in seconds
     const [isRunning, setIsRunning] = useState(false); // Track if stopwatch is running
 
-
-
     const db = getFirestore();
 
     useEffect(() => {
@@ -341,13 +339,13 @@ function Home() {
                     </div>
                 </div>
                 <div className="text-black font-bold rounded-lg shadow-lg text-center w-full mx-auto border border-gray-300">
-                    {/* <div className='text-start text-xs p-2'>
-                        average working hours
+                    <div className='text-start text-xs p-2'>
+                        Arrival on time
                     </div>
                     <div className='text-lg text-gray-600'>
-                        {averageWorkingHour} hrs
-                    </div> */}
-                </div>
+                        0.00 %
+                    </div>
+                </div>  
                 <div className="col-span-2 row-span-2 col-start-2 w-full">
                     <Holiday />
                 </div>

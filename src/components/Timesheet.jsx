@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { query, where } from "firebase/firestore";
+import { Timestamp } from "firebase/firestore";
 
+// const db = getFirestore();
 function Timesheet() {
     const [timesheetData, setTimesheetData] = useState([]);
     const [holidays, setHolidays] = useState([]);
@@ -33,6 +36,7 @@ function Timesheet() {
             if (!querySnapshot.empty) {
                 const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 data.sort((a, b) => convertFirestoreTimestampToDate(a.Date) - convertFirestoreTimestampToDate(b.Date));
+                console.log(data);
                 setTimesheetData(data);
             }
         } catch (error) {
@@ -48,6 +52,7 @@ function Timesheet() {
 
             if (data.meta.code === 200) {
                 setHolidays(data.response.holidays.map(holiday => holiday.date.iso));
+                console.log(holidays);
             } else {
                 setError(data.meta.error_detail || "Failed to fetch holidays");
             }
@@ -58,8 +63,153 @@ function Timesheet() {
         }
     }
 
+    function isToday(timestampSeconds) {
+        const givenDate = new Date(timestampSeconds * 1000);
+        const today = new Date();
+
+        return (
+            givenDate.getDate() === today.getDate() &&
+            givenDate.getMonth() === today.getMonth() &&
+            givenDate.getFullYear() === today.getFullYear()
+        );
+    }
+
     useEffect(() => {
-        getData();
+
+        const fetchTimesheetData = async () => {
+            setLoading(true);
+            const today = new Date();
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const entries = [];
+
+            for (let date = firstDayOfMonth; date <= today; date.setDate(date.getDate() + 1)) {
+                const dateString = date.toISOString().split("T")[0];
+                const startOfDay = new Date(date);
+                startOfDay.setHours(0, 0, 0, 0);
+                const startTimestamp = Timestamp.fromDate(startOfDay);
+            
+                const endOfDay = new Date(date);
+                endOfDay.setHours(23, 59, 59, 999);
+                const endTimestamp = Timestamp.fromDate(endOfDay);
+            
+            
+
+                console.log("Querying for date:", dateString);
+                console.log("Start Timestamp:", startTimestamp);
+                console.log("End Timestamp:", endTimestamp);
+                const db = getFirestore();
+                const attendanceRef = collection(db, "attendance");
+                const q = query(
+                    attendanceRef,
+                    where("Date", ">=", startTimestamp),
+                    where("Date", "<=", endTimestamp)
+                );
+                const querySnapshot = await getDocs(q);
+
+                console.log("Query result empty:", querySnapshot.empty);
+
+                if (!querySnapshot.empty) {
+                    querySnapshot.forEach(doc => {
+                        const entry = { ...doc.data(), id: doc.id };
+                        entries.push(entry);
+                    });
+                } else {
+                    entries.push({
+                        Date: startTimestamp,
+                        Checkin: null,
+                        Checkout: null,
+                        Working_hours: null,
+                        Status: null,
+                        Location: null,
+                        Shift: null,
+                        id: dateString
+                    });
+                }
+            }
+            setTimesheetData([...timesheetData, ...entries]);
+            setLoading(false);
+        };
+        fetchTimesheetData();
+    }, [holidays]);
+
+    // useEffect(() => {
+    //     const fetchTimesheetData = async () => {
+    //         setLoading(true);
+    //         try {
+    //             const today = new Date();
+    //             const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    //             let entries = [];
+
+    //             // Create an array of promises for Firestore queries
+    //             let promises = [];
+
+    //             for (let date = new Date(firstDayOfMonth); date <= today; date.setDate(date.getDate() + 1)) {
+    //                 const dateString = date.toISOString().split("T")[0];
+
+    //                 // Ensure date objects are new to avoid mutation
+    //                 const startOfDay = new Date(date);
+    //                 startOfDay.setHours(0, 0, 0, 0);
+
+    //                 const endOfDay = new Date(date);
+    //                 endOfDay.setHours(23, 59, 59, 999);
+
+    //                 const startTimestamp = Timestamp.fromDate(startOfDay);
+    //                 const endTimestamp = Timestamp.fromDate(endOfDay);
+
+    //                 console.log(`Querying for date: ${dateString}`);
+    //                 console.log("Start Timestamp:", startTimestamp);
+    //                 console.log("End Timestamp:", endTimestamp);
+
+    //                 // Firestore query
+    //                 const q = query(
+    //                     collection(db, "attendance"),
+    //                     where("Date", ">=", startTimestamp),
+    //                     where("Date", "<", endTimestamp)
+    //                 );
+
+    //                 promises.push(
+    //                     getDocs(q).then(querySnapshot => {
+    //                         if (!querySnapshot.empty) {
+    //                             querySnapshot.forEach(doc => {
+    //                                 entries.push({ ...doc.data(), id: doc.id });
+    //                             });
+    //                         } else {
+    //                             entries.push({
+    //                                 Date: startTimestamp,
+    //                                 Checkin: null,
+    //                                 Checkout: null,
+    //                                 Working_hours: null,
+    //                                 Status: null,
+    //                                 Location: null,
+    //                                 Shift: null,
+    //                                 id: dateString
+    //                             });
+    //                         }
+    //                     }).catch(error => {
+    //                         console.error(`Error fetching data for ${dateString}:`, error);
+    //                     })
+    //                 );
+    //             }
+
+    //             // Wait for all Firestore queries to complete
+    //             await Promise.all(promises);
+
+    //             // Sort entries by date
+    //             entries.sort((a, b) => convertFirestoreTimestampToDate(a.Date) - convertFirestoreTimestampToDate(b.Date));
+
+    //             setTimesheetData(entries);
+    //         } catch (error) {
+    //             console.error("Error fetching timesheet data:", error);
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+
+    //     fetchTimesheetData();
+    // }, [holidays]);
+
+    useEffect(() => {
+        // getData();
         getUpcomingHolidays();
     }, []);
 
@@ -151,24 +301,24 @@ function Timesheet() {
                                             const isSunday = date?.getDay() === 0;
                                             const isHoliday = holidays.includes(dateString);
                                             const isAbsent = !entry.Checkin && !entry.Checkout;
-
+                                            console.log(timesheetData);
                                             return (
                                                 <tr
                                                     key={entry.id}
                                                     className={`text-center transition-all duration-200 
-                                            ${isAbsent ? ' font-semibold' :
-                                                            isSunday ? 'font-semibold' :
+                                            ${isAbsent ? ' font-semibold bg-red-100 text-red-700' :
+                                                            isSunday ? 'font-semibold bg-blue-100 text-blue-700 ' :
                                                                 isHoliday ? 'bg-yellow-100 text-yellow-700 font-semibold' :
                                                                     'bg-white hover:bg-gray-50'}`
                                                     }
                                                 >
                                                     <td className="">{formatDateOnly(entry.Date)}</td>
                                                     {isSunday ? (
-                                                        <td colSpan="4" className="p-3 text-lg bg-blue-100 text-blue-700 ">Weekend</td>
+                                                        <td colSpan="4" className="p-3 text-lg">Weekend</td>
                                                     ) : isHoliday ? (
-                                                        <td colSpan="4" className="p-3 text-lg bg-yellow-100 text-yellow-700">Holiday</td>
+                                                        <td colSpan="4" className="p-3 text-lg ">Holiday</td>
                                                     ) : isAbsent ? (
-                                                        <td colSpan="4" className="p-3 text-lg bg-red-100 text-red-700">Absent</td>
+                                                        <td colSpan="4" className="p-3 text-lg">Absent</td>
                                                     ) : (
                                                         <>
                                                             <td className="p-3">{formatTimeOnly(entry.Checkin)}</td>
@@ -194,7 +344,6 @@ function Timesheet() {
                 </div>
             </div>
         </section>
-
     );
 }
 
