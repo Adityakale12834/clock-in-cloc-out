@@ -10,6 +10,18 @@ import Signup from './authentication/Signup';
 const auth = getAuth(app);
 
 function Layout() {
+    const [user, setUser] = React.useState(null);
+
+    const auth = getAuth();
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            console.log("User email:", user.email);
+            setUser(user.email);
+        } else {
+            console.log("No user is logged in.");
+        }
+    });
+
     return (
         <>
             <div className="flex flex-wrap bg-gray-50 h-[100vh]">
@@ -138,8 +150,10 @@ function Layout() {
                     </div>
                 </div>
 
-                <div className="flex flex-col flex-1">
-                    {/* <h1 className='h-10 flex items-center text-2xl'></h1> */}
+                <div className="flex flex-col flex-1 h-full overflow-y-auto">
+                    <div className='py-5 bg-gray-100 px-10 font-semibold flex items-center justify-end'>
+                    <h1 className=' text-2xl'>Hello {user}</h1>
+                    </div>
                     <main>
                         <div className="py-6">
                             <div className="px-4 mx-auto max-w-7xl sm:px-6 md:px-8">
